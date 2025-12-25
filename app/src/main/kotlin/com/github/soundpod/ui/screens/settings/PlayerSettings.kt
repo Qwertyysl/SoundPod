@@ -54,6 +54,7 @@ fun PlayerSettings(
     var volumeNormalization by rememberPreference(volumeNormalizationKey, false)
     var volumeBoosterEnabled by rememberPreference(volumeBoosterEnabledKey, false)
     var volumeBoosterGain by rememberPreference(volumeBoosterGainKey, 0)
+    var isFloatingLyricsEnabled by rememberPreference(com.github.soundpod.utils.isFloatingLyricsEnabledKey, false)
     var resumePlaybackWhenDeviceConnected by rememberPreference(
         resumePlaybackWhenDeviceConnectedKey,
         false
@@ -124,6 +125,26 @@ fun PlayerSettings(
                         }
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Lyrics",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorPalette.text.copy(alpha = 0.7f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsCard {
+                SwitchSetting(
+                    icon = IconSource.Icon(painterResource(R.drawable.mic)),
+                    title = "Floating Lyrics",
+                    description = "Show synchronized lyrics at the bottom of album art",
+                    switchState = isFloatingLyricsEnabled,
+                    onSwitchChange = { isFloatingLyricsEnabled = it }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

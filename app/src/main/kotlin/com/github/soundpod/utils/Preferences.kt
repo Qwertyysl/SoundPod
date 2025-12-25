@@ -40,6 +40,7 @@ const val pauseSearchHistoryKey = "pauseSearchHistory"
 const val pauseSongCacheKey = "pauseSongCache"
 const val quickPicksSourceKey = "quickPicksSource"
 const val progressBarStyleKey = "progressBarStyle"
+const val isFloatingLyricsEnabledKey = "isFloatingLyricsEnabled"
 
 const val appTheme = "appTheme"
 const val accentColorSource = "accentColorSource"

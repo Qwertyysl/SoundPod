@@ -67,6 +67,7 @@ import com.github.soundpod.ui.components.TextFieldDialog
 import com.github.soundpod.ui.components.TextPlaceholder
 import com.github.soundpod.ui.styling.Dimensions
 import com.github.soundpod.ui.styling.onOverlay
+import com.github.soundpod.utils.BetterLyrics
 import com.github.soundpod.utils.SynchronizedLyrics
 import com.github.soundpod.utils.isLandscape
 import com.github.soundpod.utils.isShowingSynchronizedLyricsKey
@@ -99,26 +100,29 @@ fun Lyrics(
         val menuState = LocalMenuState.current
         val currentView = LocalView.current
 
-        var isShowingSynchronizedLyrics by rememberPreference(isShowingSynchronizedLyricsKey, false)
+        var isShowingSynchronizedLyrics by rememberPreference(isShowingSynchronizedLyricsKey, true)
 
         var isEditing by remember(mediaId, isShowingSynchronizedLyrics) {
             mutableStateOf(false)
         }
 
-        var lyrics by remember {
-            mutableStateOf<Lyrics?>(null)
+        var lyricsModel by remember {
+            mutableStateOf<com.github.soundpod.models.Lyrics?>(null)
         }
 
-        val text = if (isShowingSynchronizedLyrics) lyrics?.synced else lyrics?.fixed
+        val text = if (isShowingSynchronizedLyrics) lyricsModel?.synced else lyricsModel?.fixed
 
         var isError by remember(mediaId, isShowingSynchronizedLyrics) {
             mutableStateOf(false)
         }
 
-        LaunchedEffect(mediaId, isShowingSynchronizedLyrics) {
+        val isFloatingLyricsEnabled by rememberPreference(com.github.soundpod.utils.isFloatingLyricsEnabledKey, false)
+
+        LaunchedEffect(mediaId, isShowingSynchronizedLyrics, isFloatingLyricsEnabled) {
             withContext(Dispatchers.IO) {
-                Database.lyrics(mediaId).collect {
-                    if (isShowingSynchronizedLyrics && it?.synced == null) {
+                Database.lyrics(mediaId).collect { dbLyrics ->
+                    lyricsModel = dbLyrics
+                    if ((isShowingSynchronizedLyrics || isFloatingLyricsEnabled) && dbLyrics?.synced == null) {
                         val mediaMetadata = mediaMetadataProvider()
                         var duration = withContext(Dispatchers.Main) {
                             durationProvider()
@@ -131,35 +135,65 @@ fun Lyrics(
                             }
                         }
 
-                        KuGou.lyrics(
-                            artist = mediaMetadata.artist?.toString() ?: "",
-                            title = mediaMetadata.title?.toString() ?: "",
-                            duration = duration / 1000
-                        )?.onSuccess { syncedLyrics ->
-                            Database.upsert(
-                                Lyrics(
-                                    songId = mediaId,
-                                    fixed = it?.fixed,
-                                    synced = syncedLyrics?.value ?: ""
+                        // Try BetterLyrics first, then KuGou
+                        BetterLyrics.fetchLyrics(mediaId).onSuccess { syncedLyrics ->
+                            if (syncedLyrics != null) {
+                                Database.upsert(
+                                    com.github.soundpod.models.Lyrics(
+                                        songId = mediaId,
+                                        fixed = dbLyrics?.fixed,
+                                        synced = syncedLyrics
+                                    )
                                 )
-                            )
-                        }?.onFailure {
-                            isError = true
+                                return@onSuccess
+                            }
+                            
+                            // Fallback to KuGou
+                            KuGou.lyrics(
+                                artist = mediaMetadata.artist?.toString() ?: "",
+                                title = mediaMetadata.title?.toString() ?: "",
+                                duration = duration / 1000
+                            )?.onSuccess { kuGouLyrics ->
+                                Database.upsert(
+                                    com.github.soundpod.models.Lyrics(
+                                        songId = mediaId,
+                                        fixed = dbLyrics?.fixed,
+                                        synced = kuGouLyrics?.value ?: ""
+                                    )
+                                )
+                            }?.onFailure {
+                                isError = true
+                            }
+                        }.onFailure {
+                            // Fallback to KuGou on error
+                            KuGou.lyrics(
+                                artist = mediaMetadata.artist?.toString() ?: "",
+                                title = mediaMetadata.title?.toString() ?: "",
+                                duration = duration / 1000
+                            )?.onSuccess { kuGouLyrics ->
+                                Database.upsert(
+                                    com.github.soundpod.models.Lyrics(
+                                        songId = mediaId,
+                                        fixed = dbLyrics?.fixed,
+                                        synced = kuGouLyrics?.value ?: ""
+                                    )
+                                )
+                            }?.onFailure {
+                                isError = true
+                            }
                         }
-                    } else if (!isShowingSynchronizedLyrics && it?.fixed == null) {
+                    } else if (!isShowingSynchronizedLyrics && !isFloatingLyricsEnabled && dbLyrics?.fixed == null) {
                         Innertube.lyrics(videoId = mediaId)?.onSuccess { fixedLyrics ->
                             Database.upsert(
-                                Lyrics(
+                                com.github.soundpod.models.Lyrics(
                                     songId = mediaId,
                                     fixed = fixedLyrics ?: "",
-                                    synced = it?.synced
+                                    synced = dbLyrics?.synced
                                 )
                             )
                         }?.onFailure {
                             isError = true
                         }
-                    } else {
-                        lyrics = it
                     }
                 }
             }
@@ -178,10 +212,10 @@ fun Lyrics(
                     query {
                         ensureSongInserted()
                         Database.upsert(
-                            Lyrics(
+                            com.github.soundpod.models.Lyrics(
                                 songId = mediaId,
-                                fixed = if (isShowingSynchronizedLyrics) lyrics?.fixed else it,
-                                synced = if (isShowingSynchronizedLyrics) it else lyrics?.synced,
+                                fixed = if (isShowingSynchronizedLyrics) lyricsModel?.fixed else it,
+                                synced = if (isShowingSynchronizedLyrics) it else lyricsModel?.synced,
                             )
                         )
                     }
@@ -279,20 +313,25 @@ fun Lyrics(
 
                     LazyColumn(
                         state = lazyListState,
-                        userScrollEnabled = false,
+                        userScrollEnabled = true, // Changed to true for Apple Music feel
                         contentPadding = PaddingValues(vertical = size / 2),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        horizontalAlignment = Alignment.Start, // Changed to start
                         modifier = Modifier.verticalFadingEdge()
                     ) {
                         itemsIndexed(items = synchronizedLyrics.sentences) { index, sentence ->
                             Text(
                                 text = sentence.second,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = if (index == synchronizedLyrics.index) 
+                                    MaterialTheme.typography.headlineMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                    else MaterialTheme.typography.headlineSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
                                 color = Color.White,
-                                textAlign = TextAlign.Center,
+                                textAlign = TextAlign.Start,
                                 modifier = Modifier
-                                    .padding(vertical = 4.dp, horizontal = 32.dp)
-                                    .alpha(if (index == synchronizedLyrics.index) 1F else Dimensions.mediumOpacity)
+                                    .padding(vertical = 12.dp, horizontal = 24.dp)
+                                    .alpha(if (index == synchronizedLyrics.index) 1F else 0.4f)
+                                    .clickable {
+                                        player.seekTo(sentence.first)
+                                    }
                             )
                         }
                     }
@@ -392,15 +431,15 @@ fun Lyrics(
                             MenuEntry(
                                 icon = Icons.Outlined.Download,
                                 text = stringResource(id = R.string.fetch_lyrics_again),
-                                enabled = lyrics != null,
+                                enabled = lyricsModel != null,
                                 onClick = {
                                     menuState.hide()
                                     query {
                                         Database.upsert(
-                                            Lyrics(
+                                            com.github.soundpod.models.Lyrics(
                                                 songId = mediaId,
-                                                fixed = if (isShowingSynchronizedLyrics) lyrics?.fixed else null,
-                                                synced = if (isShowingSynchronizedLyrics) null else lyrics?.synced,
+                                                fixed = if (isShowingSynchronizedLyrics) lyricsModel?.fixed else null,
+                                                synced = if (isShowingSynchronizedLyrics) null else lyricsModel?.synced,
                                             )
                                         )
                                     }

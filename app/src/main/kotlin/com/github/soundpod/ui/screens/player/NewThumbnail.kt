@@ -284,7 +284,13 @@ fun NewThumbnail(
                     toggleFullScreenLyrics = toggleFullScreenLyrics
                 )
 
-
+                if (!isShowingLyrics && error == null) {
+                    FloatingLyrics(
+                        mediaId = currentWindow.mediaItem.mediaId,
+                        player = player,
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
 
                 if (isShowingStatsForNerds) {
                     NewStatsForNerds(

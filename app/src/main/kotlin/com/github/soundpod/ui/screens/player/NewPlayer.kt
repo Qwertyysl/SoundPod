@@ -1,7 +1,9 @@
 package com.github.soundpod.ui.screens.player
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -15,7 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,10 +31,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import coil3.compose.AsyncImage
+import com.github.innertube.Innertube
+import com.github.innertube.requests.lyrics
 import com.github.soundpod.Database
 import com.github.soundpod.LocalPlayerServiceBinder
 import com.github.soundpod.ui.styling.Dimensions
@@ -39,8 +49,12 @@ import com.github.soundpod.utils.isLandscape
 import com.github.soundpod.utils.positionAndDurationState
 import com.github.soundpod.utils.rememberPreference
 import com.github.soundpod.utils.shouldBePlaying
+import com.github.soundpod.utils.thumbnail
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.github.soundpod.models.Lyrics
+import com.github.soundpod.models.Song
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(
@@ -55,10 +69,10 @@ fun NewPlayer(
     onMinimize: () -> Unit
 ) {
     val binder = LocalPlayerServiceBinder.current
-    binder?.player ?: return
+    val player = binder?.player ?: return
     var nullableMediaItem by remember {
         mutableStateOf(
-            binder.player.currentMediaItem,
+            player.currentMediaItem,
             neverEqualPolicy()
         )
     }
@@ -74,20 +88,77 @@ fun NewPlayer(
         )
     }
 
-    var shouldBePlaying by remember { mutableStateOf(binder.player.shouldBePlaying) }
+    var shouldBePlaying by remember { mutableStateOf(player.shouldBePlaying) }
 
-    binder.player.DisposableListener {
+    player.DisposableListener {
         object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 nullableMediaItem = mediaItem
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                shouldBePlaying = binder.player.shouldBePlaying
+                shouldBePlaying = player.shouldBePlaying
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
-                shouldBePlaying = binder.player.shouldBePlaying
+                shouldBePlaying = player.shouldBePlaying
+            }
+        }
+    }
+
+    // --- LYRICS FETCHING LOGIC ---
+    val isFloatingLyricsEnabled by rememberPreference(com.github.soundpod.utils.isFloatingLyricsEnabledKey, false)
+
+    LaunchedEffect(mediaItem.mediaId, isFloatingLyricsEnabled) {
+        withContext(Dispatchers.IO) {
+            Database.lyrics(mediaItem.mediaId).collect { dbLyrics: Lyrics? ->
+                // Fetch if synced lyrics are missing and either floating lyrics or full lyrics view is expected
+                if (dbLyrics?.synced == null) {
+                    var duration = withContext(Dispatchers.Main) { player.duration }
+                    while (duration == C.TIME_UNSET) {
+                        delay(100)
+                        duration = withContext(Dispatchers.Main) { player.duration }
+                    }
+
+                    com.github.soundpod.utils.BetterLyrics.fetchLyrics(mediaItem.mediaId).onSuccess { syncedLyrics: String? ->
+                        if (syncedLyrics != null) {
+                            Database.upsert(
+                                Lyrics(
+                                    songId = mediaItem.mediaId,
+                                    fixed = dbLyrics?.fixed,
+                                    synced = syncedLyrics
+                                )
+                            )
+                        } else {
+                            // Fallback to KuGou
+                            com.github.kugou.KuGou.lyrics(
+                                artist = mediaItem.mediaMetadata.artist?.toString() ?: "",
+                                title = mediaItem.mediaMetadata.title?.toString() ?: "",
+                                duration = duration / 1000
+                            )?.onSuccess { kuGouLyrics ->
+                                Database.upsert(
+                                    Lyrics(
+                                        songId = mediaItem.mediaId,
+                                        fixed = dbLyrics?.fixed,
+                                        synced = kuGouLyrics?.value ?: ""
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (dbLyrics?.fixed == null) {
+                    com.github.innertube.Innertube.lyrics(videoId = mediaItem.mediaId)?.onSuccess { fixedLyrics: String? ->
+                        Database.upsert(
+                            Lyrics(
+                                songId = mediaItem.mediaId,
+                                fixed = fixedLyrics ?: "",
+                                synced = dbLyrics?.synced
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -102,14 +173,15 @@ fun NewPlayer(
     }
 
     var showPlaylist by remember { mutableStateOf(false) }
+    var showLyrics by rememberSaveable { mutableStateOf(false) }
 
-    BackHandler(enabled = showPlaylist) {
-        showPlaylist = false
+    BackHandler(enabled = showPlaylist || showLyrics) {
+        if (showPlaylist) showPlaylist = false
+        else if (showLyrics) showLyrics = false
     }
 
-    val positionAndDuration by binder.player.positionAndDurationState()
+    val positionAndDuration by player.positionAndDurationState()
 
-    var isShowingLyrics by rememberSaveable { mutableStateOf(false) }
     var fullScreenLyrics by remember { mutableStateOf(false) }
     var isShowingStatsForNerds by rememberSaveable { mutableStateOf(false) }
 
@@ -138,53 +210,99 @@ fun NewPlayer(
             )
 
             Box(Modifier.weight(1f)) {
-                if (showPlaylist) {
-                    // Show PlaylistOverlay when playlist is visible
-                    Column {
-                        PlaylistOverlay(
-                            modifier = Modifier.weight(1f),
-                            onGoToAlbum = onGoToAlbum,
-                            onGoToArtist = onGoToArtist
-                        )
-                        Spacer(modifier = Modifier.height(26.dp))
-                    }
-                } else {
-                    // Show thumbnail and media info when playlist is hidden
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        Spacer(modifier = Modifier.height(30.dp))
-
-                        NewThumbnail(
-                            isShowingLyrics = isShowingLyrics,
-                            onShowLyrics = { isShowingLyrics = it },
-                            fullScreenLyrics = fullScreenLyrics,
-                            toggleFullScreenLyrics = { fullScreenLyrics = !fullScreenLyrics },
-                            isShowingStatsForNerds = isShowingStatsForNerds,
-                            onShowStatsForNerds = { isShowingStatsForNerds = it },
-                            modifier = Modifier
-                                .padding(horizontal = 24.dp)
-                                .fillMaxWidth(),
-                            mediaId = mediaItem.mediaId
-                        )
-
-                        Spacer(modifier = Modifier.padding(vertical = 5.dp))
-
-                        PlayerMediaItem(
-                            onGoToArtist = artistId?.let {
-                                { onGoToArtist(it) }
+                androidx.compose.animation.AnimatedContent(
+                    targetState = if (showPlaylist) 1 else if (showLyrics) 2 else 0,
+                    transitionSpec = {
+                        fadeIn(tween(400)) togetherWith fadeOut(tween(400))
+                    },
+                    label = "playerContent"
+                ) { targetState ->
+                    when (targetState) {
+                        1 -> { // Playlist
+                            Column {
+                                PlaylistOverlay(
+                                    modifier = Modifier.weight(1f),
+                                    onGoToAlbum = onGoToAlbum,
+                                    onGoToArtist = onGoToArtist
+                                )
+                                Spacer(modifier = Modifier.height(26.dp))
                             }
-                        )
+                        }
+                        2 -> { // Full Lyrics View
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                // Mini Thumbnail at the top
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = 16.dp, bottom = 16.dp)
+                                        .size(120.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { showLyrics = false }
+                                ) {
+                                    AsyncImage(
+                                        model = mediaItem.mediaMetadata.artworkUri.thumbnail(240),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                
+                                Box(modifier = Modifier.weight(1f)) {
+                                    Lyrics(
+                                        mediaId = mediaItem.mediaId,
+                                        isDisplayed = true,
+                                        onDismiss = { showLyrics = false },
+                                        ensureSongInserted = { Database.insert(mediaItem) },
+                                        size = 400.dp, // Dummy size, Lyrics uses it for padding
+                                        mediaMetadataProvider = mediaItem::mediaMetadata,
+                                        durationProvider = player::getDuration,
+                                        fullScreenLyrics = true,
+                                        toggleFullScreenLyrics = { /* already full screen */ }
+                                    )
+                                }
+                            }
+                        }
+                        else -> { // Default Thumbnail View
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Spacer(modifier = Modifier.height(30.dp))
 
-                        Spacer(modifier = Modifier.weight(1f))
+                                NewThumbnail(
+                                    isShowingLyrics = false,
+                                    onShowLyrics = { showLyrics = it },
+                                    fullScreenLyrics = fullScreenLyrics,
+                                    toggleFullScreenLyrics = { fullScreenLyrics = !fullScreenLyrics },
+                                    isShowingStatsForNerds = isShowingStatsForNerds,
+                                    onShowStatsForNerds = { isShowingStatsForNerds = it },
+                                    modifier = Modifier
+                                        .padding(horizontal = 24.dp)
+                                        .fillMaxWidth(),
+                                    mediaId = mediaItem.mediaId
+                                )
 
-                        PlayerMiddleControl(
-                            showPlaylist = showPlaylist,
-                            onTogglePlaylist = { showPlaylist = it },
-                            mediaId = mediaItem.mediaId
-                        )
+                                Spacer(modifier = Modifier.padding(vertical = 5.dp))
+
+                                PlayerMediaItem(
+                                    onGoToArtist = artistId?.let {
+                                        { onGoToArtist(it) }
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                PlayerMiddleControl(
+                                    showPlaylist = showPlaylist,
+                                    onTogglePlaylist = { showPlaylist = it },
+                                    showLyrics = showLyrics,
+                                    onToggleLyrics = { showLyrics = it },
+                                    mediaId = mediaItem.mediaId
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -203,14 +321,14 @@ fun NewPlayer(
                 shouldBePlaying = shouldBePlaying,
                 onPlayPauseClick = {
                     if (shouldBePlaying) {
-                        binder.player.pause()
+                        player.pause()
                     } else {
-                        if (binder.player.playbackState == Player.STATE_IDLE) {
-                            binder.player.prepare()
-                        } else if (binder.player.playbackState == Player.STATE_ENDED) {
-                            binder.player.seekToDefaultPosition(0)
+                        if (player.playbackState == Player.STATE_IDLE) {
+                            player.prepare()
+                        } else if (player.playbackState == Player.STATE_ENDED) {
+                            player.seekToDefaultPosition(0)
                         }
-                        binder.player.play()
+                        player.play()
                     }
                 }
             )
