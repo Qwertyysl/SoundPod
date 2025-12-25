@@ -26,7 +26,9 @@ import com.github.soundxflow.ui.components.SettingsCard
 import com.github.soundxflow.ui.components.SettingsScreenLayout
 import com.github.soundxflow.utils.accentColorSource
 import com.github.soundxflow.utils.appTheme
+import com.github.soundxflow.utils.isLockscreenLyricsEnabledKey
 import com.github.soundxflow.utils.rememberPreference
+import androidx.compose.material3.Switch
 
 @Suppress("AssignedValueIsNeverRead")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +41,7 @@ fun AppearanceSettings(
     val context = LocalContext.current
     var appThemeColor by rememberPreference(appTheme, AppThemeColor.System)
     var accentColorSource by rememberPreference(accentColorSource, AccentColorSource.Default )
+    var isLockscreenLyricsEnabled by rememberPreference(isLockscreenLyricsEnabledKey, false)
 
     BackHandler(onBack = onBackClick)
 
@@ -81,6 +84,31 @@ fun AppearanceSettings(
                     title = "Background Style",
                     description = "Choose your preferred background style",
                     onClick = onBackgroundClick
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Other",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorPalette.text.copy(alpha = 0.7f)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsCard {
+                SettingColum(
+                    title = "Lockscreen Lyrics",
+                    description = "Show current lyrics in the playback notification",
+                    trailingContent = {
+                        Switch(
+                            checked = isLockscreenLyricsEnabled,
+                            onCheckedChange = { isLockscreenLyricsEnabled = it }
+                        )
+                    },
+                    onClick = { isLockscreenLyricsEnabled = !isLockscreenLyricsEnabled }
                 )
             }
         }

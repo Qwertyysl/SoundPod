@@ -42,5 +42,6 @@ object SettingsDestinations {
     const val DATABASE = "settings_database"
     const val MORE = "settings_more"
     const val EXPERIMENT = "settings_experiment"
+    const val AZAN = "settings_azan"
     const val ABOUT = "settings_about"
 }

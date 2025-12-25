@@ -88,6 +88,7 @@ class SettingsActivity : ComponentActivity() {
                         SettingsDestinations.DATABASE -> CacheSettings(onBackClick = { finish() })
                         SettingsDestinations.MORE -> MoreSettings(onBackClick = { finish() })
                         SettingsDestinations.EXPERIMENT -> ExperimentSettings(onBackClick = { finish() })
+                        SettingsDestinations.AZAN -> AzanSettings(onBack = { finish() })
                         SettingsDestinations.ABOUT -> AboutSettings(onBackClick = { finish() })
                     }
                 }

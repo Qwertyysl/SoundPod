@@ -30,6 +30,7 @@ val Innertube.SongItem.asMediaItem: MediaItem
                         "durationText" to durationText,
                         "artistNames" to authors?.filter { it.endpoint != null }?.mapNotNull { it.name },
                         "artistIds" to authors?.mapNotNull { it.endpoint?.browseId },
+                        "albumYear" to album?.endpoint?.browseId?.let { null } // We don't have year in SongItem usually
                     )
                 )
                 .build()

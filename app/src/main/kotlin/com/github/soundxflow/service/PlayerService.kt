@@ -93,8 +93,13 @@ import com.github.soundxflow.utils.isAtLeastAndroid13
 import com.github.soundxflow.utils.isAtLeastAndroid6
 import com.github.soundxflow.utils.isAtLeastAndroid8
 import com.github.soundxflow.utils.isInvincibilityEnabledKey
+import com.github.soundxflow.utils.isLockscreenLyricsEnabledKey
 import com.github.soundxflow.utils.isShowingThumbnailInLockscreenKey
 import com.github.soundxflow.utils.mediaItems
+import com.github.soundxflow.utils.LrcParser
+import com.github.soundxflow.models.Lyrics
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.github.soundxflow.utils.persistentQueueKey
 import com.github.soundxflow.utils.preferences
 import com.github.soundxflow.utils.queueLoopEnabledKey
@@ -193,6 +198,10 @@ class PlayerService : InvincibleService(), Player.Listener, PlaybackStatsListene
 
     private var loudnessEnhancer: LoudnessEnhancer? = null
 
+    private var isLockscreenLyricsEnabled = false
+    private var currentLyricsLines: List<Pair<Long, String>>? = null
+    private var lockscreenLyricsJob: Job? = null
+
     private val binder = Binder()
 
     private var isNotificationStarted = false
@@ -244,6 +253,7 @@ class PlayerService : InvincibleService(), Player.Listener, PlaybackStatsListene
         val preferences = preferences
         isPersistentQueueEnabled = preferences.getBoolean(persistentQueueKey, false)
         isInvincibilityEnabled = preferences.getBoolean(isInvincibilityEnabledKey, false)
+        isLockscreenLyricsEnabled = preferences.getBoolean(isLockscreenLyricsEnabledKey, false)
         isShowingThumbnailInLockscreen =
             preferences.getBoolean(isShowingThumbnailInLockscreenKey, false)
 
@@ -395,12 +405,52 @@ class PlayerService : InvincibleService(), Player.Listener, PlaybackStatsListene
         }
     }
 
+    private fun updateLockscreenLyrics() {
+        lockscreenLyricsJob?.cancel()
+        currentLyricsLines = null
+
+        if (!isLockscreenLyricsEnabled || player.currentMediaItem == null) {
+            notificationManager?.notify(NOTIFICATION_ID, notification())
+            return
+        }
+
+        val songId = player.currentMediaItem?.mediaId ?: return
+
+        lockscreenLyricsJob = coroutineScope.launch {
+            Database.lyrics(songId).collectLatest { lyrics ->
+                currentLyricsLines = lyrics?.synced?.let { LrcParser.parse(it) }
+                
+                if (currentLyricsLines.isNullOrEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        notificationManager?.notify(NOTIFICATION_ID, notification())
+                    }
+                    return@collectLatest
+                }
+
+                while (isActive) {
+                    val position = withContext(Dispatchers.Main) { player.currentPosition }
+                    val currentLine = currentLyricsLines?.findLast { it.first <= position }?.second
+                    
+                    withContext(Dispatchers.Main) {
+                        val notification = notification()
+                        if (notification != null) {
+                            notificationManager?.notify(NOTIFICATION_ID, notification)
+                        }
+                    }
+                    
+                    delay(500) // Update every 500ms
+                }
+            }
+        }
+    }
+
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         mediaItemState.update { mediaItem }
 
         maybeRecoverPlaybackError()
         updateLoudnessEnhancer()
         maybeProcessRadio()
+        updateLockscreenLyrics()
 
         if (mediaItem == null) {
             bitmapProvider.listener?.invoke(null)
@@ -733,6 +783,13 @@ class PlayerService : InvincibleService(), Player.Listener, PlaybackStatsListene
                 maybeShowSongCoverInLockScreen()
             }
 
+            isLockscreenLyricsEnabledKey -> {
+                if (sharedPreferences != null) {
+                    isLockscreenLyricsEnabled = sharedPreferences.getBoolean(key, false)
+                }
+                updateLockscreenLyrics()
+            }
+
             trackLoopEnabledKey, queueLoopEnabledKey -> {
                 player.repeatMode = when {
                     preferences.getBoolean(trackLoopEnabledKey, false) -> Player.REPEAT_MODE_ONE
@@ -753,11 +810,15 @@ class PlayerService : InvincibleService(), Player.Listener, PlaybackStatsListene
         val prevIntent = Action.previous.pendingIntent
 
         val mediaMetadata = player.mediaMetadata
+        val position = player.currentPosition
+        val currentLine = if (isLockscreenLyricsEnabled) {
+            currentLyricsLines?.findLast { it.first <= position }?.second
+        } else null
 
         val builder = NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(mediaMetadata.title)
             .setContentText(mediaMetadata.artist)
-            .setSubText(player.playerError?.message)
+            .setSubText(currentLine ?: "")
             .setLargeIcon(bitmapProvider.bitmap)
             .setAutoCancel(false)
             .setOnlyAlertOnce(true)
@@ -776,6 +837,13 @@ class PlayerService : InvincibleService(), Player.Listener, PlaybackStatsListene
                 androidx.media.app.NotificationCompat.MediaStyle()
                     .setShowActionsInCompactView(0, 1, 2)
                     .setMediaSession(MediaSessionCompat.Token.fromToken(mediaSession.sessionToken))
+            )
+            .setPublicVersion(
+                NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
+                    .setContentTitle(mediaMetadata.title)
+                    .setContentText(mediaMetadata.artist)
+                    .setSubText(currentLine ?: "")
+                    .build()
             )
             .addAction(R.drawable.play_skip_back, "Skip back", prevIntent)
             .addAction(

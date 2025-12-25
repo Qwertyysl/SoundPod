@@ -41,6 +41,12 @@ const val pauseSongCacheKey = "pauseSongCache"
 const val quickPicksSourceKey = "quickPicksSource"
 const val progressBarStyleKey = "progressBarStyle"
 const val isFloatingLyricsEnabledKey = "isFloatingLyricsEnabled"
+const val isLockscreenLyricsEnabledKey = "isLockscreenLyricsEnabled"
+
+const val azanReminderEnabledKey = "azanReminderEnabled"
+const val azanLocationKey = "azanLocation"
+const val azanAudioPathKey = "azanAudioPath"
+const val prayerTimesTodayKey = "prayerTimesToday"
 
 const val appTheme = "appTheme"
 const val accentColorSource = "accentColorSource"

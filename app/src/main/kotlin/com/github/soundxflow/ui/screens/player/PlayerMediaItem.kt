@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.neverEqualPolicy
@@ -27,9 +28,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.github.soundxflow.Database
 import com.github.soundxflow.LocalPlayerServiceBinder
 import com.github.soundxflow.ui.modifier.fadingEdge
 import com.github.soundxflow.utils.DisposableListener
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PlayerMediaItem(
@@ -41,6 +45,8 @@ fun PlayerMediaItem(
     var currentItem by remember {
         mutableStateOf(player.currentMediaItem, neverEqualPolicy())
     }
+
+    var albumYear by remember { mutableStateOf<String?>(null) }
 
     // Update when player changes
     player.DisposableListener {
@@ -60,6 +66,21 @@ fun PlayerMediaItem(
 
     val mediaItem = currentItem ?: return
 
+    LaunchedEffect(mediaItem.mediaId) {
+        withContext(Dispatchers.IO) {
+            Database.song(mediaItem.mediaId).collect { song ->
+                val albumInfo = Database.songAlbumInfo(mediaItem.mediaId)
+                if (albumInfo?.id != null) {
+                    Database.album(albumInfo.id).collect { album ->
+                        albumYear = album?.year
+                    }
+                } else {
+                    albumYear = null
+                }
+            }
+        }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -77,6 +98,15 @@ fun PlayerMediaItem(
             ),
             maxLines = 1
         )
+
+        if (!albumYear.isNullOrEmpty()) {
+            Text(
+                text = albumYear!!,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1
+            )
+        }
 
         Spacer(modifier = Modifier.height(4.dp))
 

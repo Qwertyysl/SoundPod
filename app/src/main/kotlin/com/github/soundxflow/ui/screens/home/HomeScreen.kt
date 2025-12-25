@@ -23,6 +23,7 @@ import com.github.core.ui.LocalAppearance
 import com.github.soundxflow.ui.components.HorizontalTabs
 import com.github.soundxflow.ui.components.TopBar
 import com.github.soundxflow.ui.navigation.Routes
+import com.github.soundxflow.azan.AzanWidget
 
 @Composable
 fun HomeScreen(
@@ -49,6 +50,8 @@ fun HomeScreen(
             onSearch = { navController.navigate(route = Routes.Search) },
             onSettingsClick = onSettingsClick,
         )
+
+        AzanWidget()
 
         Spacer(modifier = Modifier.padding(vertical = 2.dp))
 

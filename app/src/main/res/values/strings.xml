@@ -203,6 +203,7 @@
     <string name="storage_and_cache" translatable="false">Storage and cache</string>
     <string name="more_settings" translatable="false">More Settings</string>
     <string name="experimental" translatable="false">Experimental</string>
+    <string name="azan_reminder" translatable="false">Azan Reminder</string>
     <string name="theme" translatable="false">Theme</string>
     <string name="app_theme" translatable="false">App Theme</string>
     <string name="app_theme_description" translatable="false">Select App Theme</string>

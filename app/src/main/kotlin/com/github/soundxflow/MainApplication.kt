@@ -13,6 +13,8 @@ import com.github.soundxflow.enums.CoilDiskCacheMaxSize
 import com.github.soundxflow.utils.coilDiskCacheMaxSizeKey
 import com.github.soundxflow.utils.getEnum
 import com.github.soundxflow.utils.preferences
+import com.github.soundxflow.azan.AzanWorker
+import com.github.soundxflow.utils.azanReminderEnabledKey
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -26,6 +28,10 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
         GlobalScope.launch {
             if (Innertube.visitorData.isNullOrBlank()) Innertube.visitorData =
                 Innertube.visitorData().getOrNull()
+        }
+
+        if (preferences.getBoolean(azanReminderEnabledKey, false)) {
+            AzanWorker.enqueue(this)
         }
     }
 

@@ -92,6 +92,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                         title = R.string.experimental,
                         iconRes = R.drawable.experimental,
                         screenId = SettingsDestinations.EXPERIMENT
+                    ),
+                    SettingOption(
+                        title = R.string.azan_reminder,
+                        icon = Icons.Default.NotificationsActive,
+                        screenId = SettingsDestinations.AZAN
                     )
                 )
             ),
