@@ -139,16 +139,18 @@ class MainActivity : ComponentActivity() {
                 skipHiddenState = true
             )
 
-            val appTheme by rememberPreference(appTheme, AppThemeColor.System)
+            val appThemePreference by rememberPreference(appTheme, AppThemeColor.System)
             val designStyle by rememberPreference(designStyleKey, DesignStyle.Classic)
 
-            val darkTheme = when (appTheme) {
+            val darkTheme = when (appThemePreference) {
                 AppThemeColor.System -> isSystemInDarkTheme()
                 AppThemeColor.Dark -> true
                 AppThemeColor.Light -> false
+                else -> true // Spotify, YouTube Music are dark
             }
 
             AppTheme(
+                appThemeColor = appThemePreference,
                 darkTheme = darkTheme,
                 usePureBlack = false,
                 useMaterialNeutral = false,

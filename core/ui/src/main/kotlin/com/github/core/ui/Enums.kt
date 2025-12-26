@@ -38,5 +38,6 @@ enum class Darkness {
 @Parcelize
 enum class DesignStyle : Parcelable {
     Classic,
-    Modern
+    Modern,
+    Glass
 }

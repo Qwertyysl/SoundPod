@@ -162,10 +162,6 @@ fun BackgroundSettings(onBackClick: () -> Unit) {
             }
             TwoColumnRow {
                 BackgroundPreviewCard("Alpine Night", "lottie/bg4.lottie", currentStyle == BackgroundStyles.ABSTRACT_4) { context.preferences.edit { putInt(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.ABSTRACT_4) } }
-                BackgroundPreviewCard("Ocean Flow", "lottie/bg5.lottie", currentStyle == BackgroundStyles.ABSTRACT_5) { context.preferences.edit { putInt(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.ABSTRACT_5) } }
-            }
-            TwoColumnRow {
-                BackgroundPreviewCard("Forest Mist", "lottie/bg6.lottie", currentStyle == BackgroundStyles.ABSTRACT_6) { context.preferences.edit { putInt(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.ABSTRACT_6) } }
                 MeshOptionCard("Mesh Gradient", currentStyle == BackgroundStyles.MESH) { context.preferences.edit { putInt(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.MESH) } }
             }
             TwoColumnRow {

@@ -53,7 +53,10 @@ fun <T : SortBy> SortingHeader(
         TextButton(
             onClick = { isSorting = true }
         ) {
-            Text(text = stringResource(id = sortBy.text))
+            Text(
+                text = stringResource(id = sortBy.text),
+                color = MaterialTheme.colorScheme.primary
+            )
         }
 
         IconButton(
@@ -72,7 +75,8 @@ fun <T : SortBy> SortingHeader(
 
         Text(
             text = pluralStringResource(id = itemCountText, count = size, size),
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         DropdownMenu(

@@ -76,6 +76,7 @@ fun ItemContainer(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = textAlign,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -92,6 +93,7 @@ fun ItemContainer(
                     text = subtitle,
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = textAlign,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -141,6 +143,7 @@ fun ListItemContainer(
                 Text(
                     text = title,
                     lineHeight = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = maxLines,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -160,6 +163,7 @@ fun ListItemContainer(
                 subtitle?.let {
                     Text(
                         text = subtitle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

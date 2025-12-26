@@ -191,17 +191,17 @@ fun AboutSettings(
                     SettingColum(
                         icon = IconSource.Icon(painterResource(id = R.drawable.github)),
                         title = stringResource(id = R.string.source_code),
-                        onClick = { uriHandler.openUri("https://github.com/arunnechully/SoundxFlow") },
+                        onClick = { uriHandler.openUri("https://github.com/Qwertyysl/SoundxFlow") },
                     )
                     SettingColum(
                         icon = IconSource.Icon(painterResource(id = R.drawable.idea)),
                         title = stringResource(id = R.string.suggest_an_idea),
-                        onClick = { uriHandler.openUri("https://github.com/arunnechully/SoundxFlow/issues/new?template=feature_request.md") },
+                        onClick = { uriHandler.openUri("mailto:mnxzmi98@gmail.com") },
                     )
                     SettingColum(
                         icon = IconSource.Icon(painterResource(id = R.drawable.bug)),
                         title = stringResource(id = R.string.report_a_bug),
-                        onClick = { uriHandler.openUri("https://github.com/arunnechully/SoundxFlow/issues/new?template=bug_report.md") },
+                        onClick = { uriHandler.openUri("mailto:mnxzmi98@gmail.com") },
                     )
                 }
 

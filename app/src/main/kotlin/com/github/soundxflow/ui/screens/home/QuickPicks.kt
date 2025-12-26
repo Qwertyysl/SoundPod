@@ -125,6 +125,7 @@ fun QuickPicks(
             Text(
                 text = stringResource(id = R.string.quick_picks),
                 style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = sectionTextModifier
             )
 
@@ -207,6 +208,7 @@ fun QuickPicks(
                 Text(
                     text = stringResource(id = R.string.related_albums),
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = sectionTextModifier
                 )
 
@@ -232,6 +234,7 @@ fun QuickPicks(
                 Text(
                     text = stringResource(id = R.string.similar_artists),
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = sectionTextModifier
                 )
 
@@ -257,6 +260,7 @@ fun QuickPicks(
                 Text(
                     text = stringResource(id = R.string.recommended_playlists),
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = sectionTextModifier
                 )
 

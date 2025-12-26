@@ -210,6 +210,8 @@
     <string name="dark_theme" translatable="false">Dark Theme</string>
     <string name="light_theme" translatable="false">Light Theme</string>
     <string name="System_default" translatable="false">System Default</string>
+    <string name="spotify" translatable="false">Spotify</string>
+    <string name="youtube_music" translatable="false">YouTube Music</string>
     <string name="accent_color" translatable="false">Accent Color</string>
     <string name="source_code" translatable="false">View Source Code</string>
     <string name="autocheck">Auto check for updates</string>

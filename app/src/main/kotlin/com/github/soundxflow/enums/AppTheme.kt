@@ -14,5 +14,11 @@ enum class AppThemeColor(
     ),
     System(
         resourceId = R.string.System_default,
+    ),
+    Spotify(
+        resourceId = R.string.spotify,
+    ),
+    YouTubeMusic(
+        resourceId = R.string.youtube_music,
     )
 }

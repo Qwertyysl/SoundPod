@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -75,6 +76,11 @@ fun AzanWidget() {
         return
     }
 
+    val appearance = com.github.core.ui.LocalAppearance.current
+    val isGlass = appearance.designStyle == com.github.core.ui.DesignStyle.Glass
+    val isDark = appearance.colorPalette.isDark
+    val onColor = if (isGlass) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.onSurface
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -92,12 +98,13 @@ fun AzanWidget() {
                 Text(
                     text = "Prayer Times (${azanZones.find { it.code == selectedZone }?.code})",
                     style = MaterialTheme.typography.titleSmall,
+                    color = onColor,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = timeString,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = onColor,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -105,7 +112,7 @@ fun AzanWidget() {
             Text(
                 text = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(Date()),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                color = onColor.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.Top)
             )
         }
@@ -127,9 +134,25 @@ fun AzanWidget() {
 
 @Composable
 fun PrayerTimeItem(name: String, time: String) {
+    val appearance = com.github.core.ui.LocalAppearance.current
+    val isGlass = appearance.designStyle == com.github.core.ui.DesignStyle.Glass
+    val isDark = appearance.colorPalette.isDark
+    val onColor = if (isGlass) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.onSurface
+    val onColorSecondary = if (isGlass) (if (isDark) Color.LightGray else Color.DarkGray) else MaterialTheme.colorScheme.onSurfaceVariant
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = name, style = MaterialTheme.typography.labelSmall, fontSize = 10.sp)
-        Text(text = time, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+        Text(
+            text = name, 
+            style = MaterialTheme.typography.labelSmall, 
+            fontSize = 10.sp,
+            color = onColorSecondary
+        )
+        Text(
+            text = time, 
+            style = MaterialTheme.typography.bodySmall, 
+            fontWeight = FontWeight.Bold,
+            color = onColor
+        )
     }
 }
 

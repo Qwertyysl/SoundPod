@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,10 +45,20 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.github.core.ui.LocalAppearance
 import com.github.core.ui.collapsedPlayerProgressBar
+import com.github.core.ui.DesignStyle
 import com.github.soundxflow.LocalPlayerServiceBinder
 import com.github.soundxflow.service.PlayerService
 import com.github.soundxflow.R
 import com.github.soundxflow.ui.appearance.DynamicBackground
+import com.github.soundxflow.ui.appearance.PLAYER_BACKGROUND_STYLE_KEY
+import com.github.soundxflow.ui.appearance.BackgroundStyles
+import com.github.soundxflow.ui.modifier.glassEffect
+import com.github.soundxflow.ui.appearance.extractDominantColor
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.github.soundxflow.ui.styling.Dimensions
 import com.github.soundxflow.ui.styling.px
 import com.github.soundxflow.utils.rememberPreference
@@ -87,26 +99,53 @@ fun NewMiniPlayer(
     }
     val positionAndDuration by player.positionAndDurationState()
     val mediaItem = nullableMediaItem ?: return
-    val (colorPalette) = LocalAppearance.current
+    val context = LocalContext.current
+    val appearance = LocalAppearance.current
+    val colorPalette = appearance.colorPalette
+    val backgroundStyle by rememberPreference(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.DYNAMIC)
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass || backgroundStyle == BackgroundStyles.GLASS
 
+    var adaptiveContentColor by remember { mutableStateOf(colorPalette.text) }
+    
+    LaunchedEffect(mediaItem.mediaMetadata.artworkUri) {
+        val dominant = withContext(Dispatchers.IO) {
+            extractDominantColor(context, mediaItem.mediaMetadata.artworkUri?.toString(), colorPalette.background1)
+        }
+        adaptiveContentColor = if (dominant.luminance() > 0.5f) Color.Black else Color.White
+    }
+
+    val contentColor = if (isGlassTheme) adaptiveContentColor else colorPalette.text
     val title = mediaItem.mediaMetadata.title?.toString() ?: ""
     val artist = mediaItem.mediaMetadata.artist?.toString() ?: ""
     val album = mediaItem.mediaMetadata.albumTitle?.toString() ?: ""
 
     val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    DynamicBackground(
-        thumbnailUrl = mediaItem.mediaMetadata.artworkUri.toString(),
-        animate = false,
-        useGradient = false,
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(72.dp + navigationBarsPadding)
-            .clickable(onClick = openPlayer)
+            .then(
+                if (isGlassTheme) {
+                    Modifier.glassEffect(shape = RoundedCornerShape(0.dp), alpha = 0.15f)
+                } else {
+                    Modifier // DynamicBackground will handle it below if not glass
+                }
+            )
     ) {
+        if (!isGlassTheme) {
+            DynamicBackground(
+                thumbnailUrl = mediaItem.mediaMetadata.artworkUri.toString(),
+                animate = false,
+                useGradient = false,
+                modifier = Modifier.fillMaxSize()
+            ) {}
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .clickable(onClick = openPlayer)
                 .drawBehind {
                     val position = positionAndDuration.first
                     val duration = positionAndDuration.second
@@ -153,18 +192,30 @@ fun NewMiniPlayer(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            shadow = if (isGlassTheme) Shadow(
+                                color = if (contentColor == Color.White) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f),
+                                offset = Offset(1f, 1f),
+                                blurRadius = 2f
+                            ) else null
+                        ),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = colorPalette.text
+                        color = contentColor
                     )
                     Text(
                         text = if (album.isNotEmpty()) "$artist • $album" else artist,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            shadow = if (isGlassTheme) Shadow(
+                                color = if (contentColor == Color.White) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f),
+                                offset = Offset(1f, 1f),
+                                blurRadius = 2f
+                            ) else null
+                        ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = colorPalette.text.copy(alpha = 0.7f),
+                        color = contentColor.copy(alpha = 0.7f),
                         fontSize = 11.sp
                     )
                 }
@@ -191,7 +242,7 @@ fun NewMiniPlayer(
                     Icon(
                         painter = painterResource(id = R.drawable.chevron_up),
                         contentDescription = "Open Player",
-                        tint = colorPalette.text,
+                        tint = contentColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }

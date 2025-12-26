@@ -56,15 +56,17 @@ class SettingsActivity : ComponentActivity() {
         val screenId = intent.getStringExtra("SCREEN_ID") ?: SettingsDestinations.MAIN
 
         setContent {
-            val appTheme by rememberPreference(appTheme, AppThemeColor.System)
+            val appThemePreference by rememberPreference(appTheme, AppThemeColor.System)
 
-            val darkTheme = when (appTheme) {
+            val darkTheme = when (appThemePreference) {
                 AppThemeColor.System -> isSystemInDarkTheme()
                 AppThemeColor.Dark -> true
                 AppThemeColor.Light -> false
+                else -> true
             }
 
             AppTheme(
+                appThemeColor = appThemePreference,
                 darkTheme = darkTheme,
                 usePureBlack = false,
                 useMaterialNeutral = false

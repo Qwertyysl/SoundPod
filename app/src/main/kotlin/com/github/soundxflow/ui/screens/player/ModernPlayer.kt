@@ -16,7 +16,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +54,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.github.soundxflow.ui.components.BaseMediaItemMenu
+import com.github.soundxflow.ui.appearance.PLAYER_BACKGROUND_STYLE_KEY
+import com.github.soundxflow.ui.appearance.BackgroundStyles
+import com.github.soundxflow.ui.modifier.glassEffect
+import com.github.core.ui.DesignStyle
 import kotlinx.coroutines.flow.flowOf
 import com.github.soundxflow.models.Lyrics as LyricsModel
 import com.github.soundxflow.models.LocalMenuState
@@ -81,7 +87,10 @@ fun ModernPlayer(
         mutableStateOf(player.currentMediaItem, neverEqualPolicy())
     }
     val mediaItem = nullableMediaItem ?: return
-    val (colorPalette) = LocalAppearance.current
+    val appearance = LocalAppearance.current
+    val colorPalette = appearance.colorPalette
+    val backgroundStyle by rememberPreference(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.DYNAMIC)
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass || backgroundStyle == BackgroundStyles.GLASS
 
     var shouldBePlaying by remember { mutableStateOf(player.shouldBePlaying) }
 
@@ -300,7 +309,13 @@ fun ModernPlayer(
         
         Text(
             text = if (isAzanPlaying) "AZAN" else "NOW PLAYING",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.3f),
+                    offset = Offset(1f, 1f),
+                    blurRadius = 2f
+                )
+            ),
             color = if (isAzanPlaying) colorPalette.accent else colorPalette.textSecondary,
             fontWeight = FontWeight.Bold,
             letterSpacing = 2.sp,
@@ -381,13 +396,15 @@ fun ModernPlayer(
                                 )
                             }
                             
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.weight(1f))
                             
                             PlayerMediaItem(onGoToArtist = { 
                                 mediaItem.mediaMetadata.extras?.getStringArrayList("artistIds")?.firstOrNull()?.let { 
                                     onGoToArtist(it) 
                                 }
                             })
+
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -487,8 +504,14 @@ fun ModernPlayer(
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(if (isAzanPlaying) colorPalette.accent.copy(alpha = 0.5f) else colorPalette.accent)
+                    .then(
+                        if (isGlassTheme) {
+                            Modifier.glassEffect(shape = androidx.compose.foundation.shape.CircleShape, alpha = 0.2f)
+                        } else {
+                            Modifier.clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(if (isAzanPlaying) colorPalette.accent.copy(alpha = 0.5f) else colorPalette.accent)
+                        }
+                    )
                     .clickable(enabled = !isAzanPlaying) {
                         if (shouldBePlaying) player.pause() else player.play()
                     },
@@ -497,7 +520,7 @@ fun ModernPlayer(
                 Icon(
                     painter = painterResource(id = if (shouldBePlaying) R.drawable.pause else R.drawable.play),
                     contentDescription = if (shouldBePlaying) "Pause" else "Play",
-                    tint = colorPalette.onAccent,
+                    tint = if (isGlassTheme) colorPalette.accent else colorPalette.onAccent,
                     modifier = Modifier.size(36.dp)
                 )
             }

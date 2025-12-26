@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,16 +48,26 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.github.core.ui.LocalAppearance
+import com.github.core.ui.DesignStyle
 import com.github.soundxflow.LocalPlayerServiceBinder
 import com.github.soundxflow.service.PlayerService
 import com.github.soundxflow.R
 import com.github.soundxflow.ui.styling.Dimensions
 import com.github.soundxflow.ui.styling.px
+import com.github.soundxflow.ui.appearance.PLAYER_BACKGROUND_STYLE_KEY
+import com.github.soundxflow.ui.appearance.BackgroundStyles
+import com.github.soundxflow.ui.appearance.extractDominantColor
+import com.github.soundxflow.ui.modifier.glassEffect
 import com.github.soundxflow.utils.rememberPreference
 import com.github.soundxflow.utils.DisposableListener
 import com.github.soundxflow.utils.positionAndDurationState
 import com.github.soundxflow.utils.shouldBePlaying
 import com.github.soundxflow.utils.thumbnail
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 import com.github.soundxflow.utils.forceSeekToNext
 import com.github.soundxflow.utils.forceSeekToPrevious
@@ -94,8 +105,22 @@ fun ModernMiniPlayer(
     val positionAndDuration by player.positionAndDurationState()
     val isAzanPlaying by rememberPreference(com.github.soundxflow.utils.isAzanPlayingKey, false)
     val mediaItem = nullableMediaItem ?: return
-    val (colorPalette) = LocalAppearance.current
+    val context = LocalContext.current
+    val appearance = LocalAppearance.current
+    val colorPalette = appearance.colorPalette
+    val backgroundStyle by rememberPreference(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.DYNAMIC)
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass || backgroundStyle == BackgroundStyles.GLASS
 
+    var adaptiveContentColor by remember { mutableStateOf(colorPalette.text) }
+    
+    LaunchedEffect(mediaItem.mediaMetadata.artworkUri) {
+        val dominant = withContext(Dispatchers.IO) {
+            extractDominantColor(context, mediaItem.mediaMetadata.artworkUri?.toString(), colorPalette.background1)
+        }
+        adaptiveContentColor = if (dominant.luminance() > 0.5f) Color.Black else Color.White
+    }
+
+    val contentColor = if (isGlassTheme) adaptiveContentColor else colorPalette.text
     val title = if (isAzanPlaying) "AZAN" else mediaItem.mediaMetadata.title?.toString() ?: ""
     val artist = if (isAzanPlaying) "Playing Azan..." else mediaItem.mediaMetadata.artist?.toString() ?: ""
 
@@ -107,14 +132,20 @@ fun ModernMiniPlayer(
             .fillMaxWidth()
             .height(80.dp + navigationBarsPadding) // Slightly taller
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        colorPalette.background2.copy(alpha = 0.95f),
-                        colorPalette.background1.copy(alpha = 0.95f)
-                    )
-                )
+            .then(
+                if (isGlassTheme) {
+                    Modifier.glassEffect(shape = RoundedCornerShape(16.dp), alpha = 0.15f)
+                } else {
+                    Modifier.clip(RoundedCornerShape(16.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    colorPalette.background2.copy(alpha = 0.95f),
+                                    colorPalette.background1.copy(alpha = 0.95f)
+                                )
+                            )
+                        )
+                }
             )
             .clickable(onClick = openPlayer)
     ) {
@@ -169,18 +200,30 @@ fun ModernMiniPlayer(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            shadow = if (isGlassTheme) Shadow(
+                                color = Color.Black.copy(alpha = 0.3f),
+                                offset = Offset(1f, 1f),
+                                blurRadius = 2f
+                            ) else null
+                        ),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = colorPalette.text
+                        color = contentColor
                     )
                     Text(
                         text = artist,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            shadow = if (isGlassTheme) Shadow(
+                                color = if (contentColor == Color.White) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f),
+                                offset = Offset(1f, 1f),
+                                blurRadius = 2f
+                            ) else null
+                        ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = colorPalette.textSecondary,
+                        color = contentColor.copy(alpha = 0.7f),
                         fontSize = 11.sp
                     )
                 }
@@ -199,7 +242,7 @@ fun ModernMiniPlayer(
                         Icon(
                             painter = painterResource(id = R.drawable.play_skip_back),
                             contentDescription = "Previous",
-                            tint = if (isAzanPlaying) colorPalette.text.copy(alpha = 0.5f) else colorPalette.text,
+                            tint = if (isAzanPlaying) contentColor.copy(alpha = 0.5f) else contentColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -240,7 +283,7 @@ fun ModernMiniPlayer(
                         Icon(
                             painter = painterResource(id = R.drawable.play_skip_forward),
                             contentDescription = "Next",
-                            tint = if (isAzanPlaying) colorPalette.text.copy(alpha = 0.5f) else colorPalette.text,
+                            tint = if (isAzanPlaying) contentColor.copy(alpha = 0.5f) else contentColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }

@@ -49,6 +49,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -63,6 +66,10 @@ import androidx.media3.common.util.UnstableApi
 import com.github.core.ui.LocalAppearance
 import com.github.core.ui.favoritesIcon
 import com.github.core.ui.surface
+import com.github.core.ui.DesignStyle
+import com.github.soundxflow.ui.appearance.PLAYER_BACKGROUND_STYLE_KEY
+import com.github.soundxflow.ui.appearance.BackgroundStyles
+import com.github.soundxflow.ui.modifier.glassEffect
 import com.github.innertube.models.NavigationEndpoint
 import com.github.soundxflow.Database
 import com.github.soundxflow.LocalPlayerServiceBinder
@@ -262,7 +269,11 @@ fun PlayerMiddleControl(
     onGoToArtist: (String) -> Unit
 ) {
     val binder = LocalPlayerServiceBinder.current
-    val (colorPalette) = LocalAppearance.current
+    val appearance = LocalAppearance.current
+    val colorPalette = appearance.colorPalette
+    val backgroundStyle by rememberPreference(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.DYNAMIC)
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass || backgroundStyle == BackgroundStyles.GLASS
+    
     val menuState = LocalMenuState.current
     var likedAt by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -275,6 +286,12 @@ fun PlayerMiddleControl(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp)
+            .then(
+                if (isGlassTheme) {
+                    Modifier.glassEffect(shape = RoundedCornerShape(24.dp), alpha = 0.1f)
+                        .padding(vertical = 4.dp)
+                } else Modifier
+            )
     ) {
         AnimatedIconButton(
             onClick = { onTogglePlaylist(!showPlaylist) }
@@ -343,7 +360,11 @@ fun PlayerControlBottom(
 ) {
     val binder = LocalPlayerServiceBinder.current
     val player = binder?.player ?: return
-    val (colorPalette) = LocalAppearance.current
+    val appearance = LocalAppearance.current
+    val colorPalette = appearance.colorPalette
+    val backgroundStyle by rememberPreference(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.DYNAMIC)
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass || backgroundStyle == BackgroundStyles.GLASS
+
     var trackLoopEnabled by rememberPreference(trackLoopEnabledKey, defaultValue = false)
     var queueLoopEnabled by rememberPreference(queueLoopEnabledKey, defaultValue = false)
     val isAzanPlaying by rememberPreference(com.github.soundxflow.utils.isAzanPlayingKey, false)
@@ -354,6 +375,12 @@ fun PlayerControlBottom(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp)
+            .then(
+                if (isGlassTheme) {
+                    Modifier.glassEffect(shape = RoundedCornerShape(32.dp), alpha = 0.15f)
+                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                } else Modifier
+            )
     ) {
         // Shuffle
         AnimatedIconButton(
@@ -639,10 +666,21 @@ private fun PlayerSeekBarDefault(
 
     var scrubbingPosition by remember(mediaId) { mutableStateOf<Long?>(null) }
 
+    val appearance = LocalAppearance.current
+    val colorPalette = appearance.colorPalette
+    val backgroundStyle by rememberPreference(PLAYER_BACKGROUND_STYLE_KEY, BackgroundStyles.DYNAMIC)
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass || backgroundStyle == BackgroundStyles.GLASS
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp)
+            .then(
+                if (isGlassTheme) {
+                    Modifier.glassEffect(shape = RoundedCornerShape(16.dp), alpha = 0.1f)
+                        .padding(vertical = 12.dp, horizontal = 12.dp)
+                } else Modifier
+            )
     ) {
 
         SeekBar(
@@ -659,8 +697,8 @@ private fun PlayerSeekBarDefault(
                 scrubbingPosition?.let(binder.player::seekTo)
                 scrubbingPosition = null
             },
-            color = MaterialTheme.colorScheme.primary,
-            backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+            color = colorPalette.accent,
+            backgroundColor = colorPalette.accent.copy(alpha = 0.2f),
             shape = RoundedCornerShape(8.dp)
         )
 
@@ -673,16 +711,28 @@ private fun PlayerSeekBarDefault(
         ) {
             Text(
                 text = formatAsDuration(scrubbingPosition ?: position),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelMedium,
+                color = colorPalette.text,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        offset = Offset(1f, 1f),
+                        blurRadius = 2f
+                    )
+                ),
                 maxLines = 1
             )
 
             if (duration != C.TIME_UNSET) {
                 Text(
                     text = formatAsDuration(duration),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.labelMedium,
+                    color = colorPalette.text,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        shadow = Shadow(
+                            color = Color.Black.copy(alpha = 0.3f),
+                            offset = Offset(1f, 1f),
+                            blurRadius = 2f
+                        )
+                    ),
                     maxLines = 1
                 )
             }

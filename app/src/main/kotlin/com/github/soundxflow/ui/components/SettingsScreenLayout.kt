@@ -24,6 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp // Import Dp
 import androidx.compose.ui.unit.dp
 import com.github.core.ui.LocalAppearance
+import com.github.core.ui.DesignStyle
+import com.github.soundxflow.ui.modifier.glassEffect
+import androidx.compose.foundation.layout.Box
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,13 +37,16 @@ fun SettingsScreenLayout(
     horizontalPadding: Dp = 14.dp, // <--- 1. Add Default Parameter
     content: @Composable () -> Unit
 ) {
-    val (colorPalette) = LocalAppearance.current
+    val appearance = LocalAppearance.current
+    val (colorPalette) = appearance
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass
     val scrollState = rememberScrollState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                modifier = if (isGlassTheme) Modifier.glassEffect(shape = RoundedCornerShape(0.dp), alpha = 0.1f) else Modifier,
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -59,15 +65,16 @@ fun SettingsScreenLayout(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = horizontalPadding) // <--- 2. Use the variable
-                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                .then(if (scrollable) Modifier.verticalScroll(scrollState) else Modifier)
-        ) {
-            content()
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = horizontalPadding) // <--- 2. Use the variable
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .then(if (scrollable) Modifier.verticalScroll(scrollState) else Modifier)
+            ) {
+                content()
+            }
         }
     }
 }

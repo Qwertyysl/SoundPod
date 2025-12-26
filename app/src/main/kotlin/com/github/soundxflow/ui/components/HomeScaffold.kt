@@ -25,6 +25,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.text.font.FontWeight
+import com.github.soundxflow.ui.modifier.glassEffect
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +41,7 @@ fun HomeScaffold(
 ) {
     val appearance = LocalAppearance.current
 
-    if (appearance.designStyle == DesignStyle.Modern) {
+    if (appearance.designStyle == DesignStyle.Modern || appearance.designStyle == DesignStyle.Glass) {
         ModernHomeScaffold(
             title = title,
             snackbarHost = snackbarHost,
@@ -120,12 +123,15 @@ fun ModernHomeScaffold(
     content: @Composable (() -> Unit)
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val (colorPalette) = LocalAppearance.current
+    val appearance = LocalAppearance.current
+    val (colorPalette) = appearance
+    val isGlassTheme = appearance.designStyle == DesignStyle.Glass
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
+                modifier = if (isGlassTheme) Modifier.glassEffect(shape = RoundedCornerShape(0.dp), alpha = 0.1f) else Modifier,
                 title = {
                     Text(
                         text = stringResource(id = title),
@@ -149,7 +155,7 @@ fun ModernHomeScaffold(
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = Color.Transparent,
-                    scrolledContainerColor = colorPalette.background0.copy(alpha = 0.95f)
+                    scrolledContainerColor = if (isGlassTheme) Color.Transparent else colorPalette.background0.copy(alpha = 0.95f)
                 ),
                 scrollBehavior = scrollBehavior
             )

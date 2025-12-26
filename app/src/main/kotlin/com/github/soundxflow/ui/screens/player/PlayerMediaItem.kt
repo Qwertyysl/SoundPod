@@ -21,8 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -89,6 +91,7 @@ fun PlayerMediaItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp)
+            .padding(bottom = 8.dp) // Added padding to avoid overlap
     ) {
 
         // TITLE
@@ -97,7 +100,12 @@ fun PlayerMediaItem(
             color = colorPalette.text,
             modifier = Modifier.basicMarquee(),
             style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.ExtraBold
+                fontWeight = FontWeight.ExtraBold,
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.3f),
+                    offset = Offset(2f, 2f),
+                    blurRadius = 4f
+                )
             ),
             maxLines = 1
         )
@@ -106,7 +114,13 @@ fun PlayerMediaItem(
             Text(
                 text = albumYear!!,
                 color = colorPalette.textSecondary,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        offset = Offset(1f, 1f),
+                        blurRadius = 2f
+                    )
+                ),
                 maxLines = 1
             )
         }
@@ -128,7 +142,13 @@ fun PlayerMediaItem(
             Text(
                 text = mediaItem.mediaMetadata.artist?.toString().orEmpty(),
                 color = colorPalette.text,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        offset = Offset(2f, 2f),
+                        blurRadius = 4f
+                    )
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
