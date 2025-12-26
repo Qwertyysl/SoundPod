@@ -23,8 +23,8 @@ android {
         applicationId = "com.github.soundxflow"
         minSdk = 23
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.0.8"
+        versionCode = 14
+        versionName = "2.0.0"
     }
 
     splits {

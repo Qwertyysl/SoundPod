@@ -27,6 +27,11 @@ An Android application for streaming music from YouTube Music.
 
 ### 🗒️ New features
 
+- **Glass Design Style**: A premium iOS-style glass aesthetic with liquid background effects and real-time transparency.
+- **Adaptive Glass UI**: High-performance transparency effects that automatically adjust for Light and Dark modes.
+- **Themed Color Schemes**: Dedicated **Spotify** (Green/Black) and **YouTube Music** (Red/Black) theme options.
+- **iOS Liquid SeekBar**: Completely redesigned progress bar with a liquid lens thumb and specular highlights.
+- **Smart Mini Player**: Intelligent text contrast that adapts to album art luminance.
 - **Modern UI Redesign**: A fresh, sleek card-based aesthetic with fluid animations and parallel support for the Classic design.
 - **Advanced Player Personalization**: Choose from multiple background styles including **Mesh Gradient**, **Dynamic Fusion**, and high-quality **Abstract Lottie** animations.
 - **Floating Lyrics**: Real-time synchronized lyrics overlay directly on the player artwork.
