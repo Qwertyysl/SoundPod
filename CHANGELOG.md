@@ -1,5 +1,22 @@
 # Changelog - Niusic
 
+## [2.1.1] - 2025-12-27
+
+### Added
+- **Music Style Presets**: Integrated Equalizer API with Vocal, Music, and Dolby presets accessible via the player.
+- **Homepage History**: New "Suggested for you" section featuring recently played songs and improved smart suggestions.
+- **Azan Quiet Mode**: Simple 5-minute quiet mode for prayer times without audio files.
+- **Donation Support**: Added PayPal integration in the About section.
+
+### Changed
+- **Mini Player Refinement**: Reduced button sizes and icon sizes for a cleaner look. Fixed visibility in Light Mode with Glass theme.
+- **UI Consistency**: Standardized player top bar layout to fit more controls comfortably.
+- **Azan Default**: Updated default azan sound to `azantv3.mp3`.
+
+### Fixed
+- **Connectivity**: Resolved network errors on Android 16 and custom ROMs via enhanced security config and retry logic.
+- **Lockscreen Lyrics**: Fixed potential crashes and added Apple-style lockscreen artwork support.
+
 ## [2.1.0] - 2025-12-27
 
 ### Added
